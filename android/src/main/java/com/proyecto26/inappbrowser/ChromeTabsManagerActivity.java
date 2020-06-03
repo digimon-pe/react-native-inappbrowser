@@ -58,8 +58,8 @@ public class ChromeTabsManagerActivity extends Activity {
       ComponentName name = browserIntent.resolveActivity(getPackageManager());
       if (name.getPackageName().equals(CHROME_PACKAGE_NAME) && name.getClassName().equals(CHROME_CLASS_NAME)
               || name.getPackageName().equals(FIREFOX_PACKAGE_NAME) && name.getClassName().equals(FIREFOX_CLASS_NAME)
-              || name.getPackageName().equals(YBROWSER_PACKAGE_NAME) && name.getClassName().equals(YBROWSER_CLASS_NAME))
-              || name.getPackageName().equals(YAHOO_JAPAN_PACKAGE_NAME) && name.getClassName().equals((YAHOO_JAPAN_CLASS_NAME)) {
+              || name.getPackageName().equals(YBROWSER_PACKAGE_NAME) && name.getClassName().equals(YBROWSER_CLASS_NAME)
+              || name.getPackageName().equals(YAHOO_JAPAN_PACKAGE_NAME) && name.getClassName().equals((YAHOO_JAPAN_CLASS_NAME))) {
         startActivity(browserIntent);
       }
     } else {
