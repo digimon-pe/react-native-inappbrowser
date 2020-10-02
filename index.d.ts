@@ -12,11 +12,34 @@ declare module 'react-native-inappbrowser-reborn' {
     url: string;
   }
 
-  export interface InAppBrowserOptions {
+  type InAppBrowseriOSOptions = {
     dismissButtonStyle?: 'done' | 'close' | 'cancel',
     preferredBarTintColor?: string,
     preferredControlTintColor?: string,
     readerMode?: boolean,
+    animated?: boolean,
+    modalPresentationStyle?:
+      | 'automatic'
+      | 'fullScreen'
+      | 'pageSheet'
+      | 'formSheet'
+      | 'currentContext'
+      | 'custom'
+      | 'overFullScreen'
+      | 'overCurrentContext'
+      | 'popover'
+      | 'none',
+    modalTransitionStyle?:
+      | 'coverVertical'
+      | 'flipHorizontal'
+      | 'crossDissolve'
+      | 'partialCurl',
+    modalEnabled?: boolean,
+    enableBarCollapsing?: boolean,
+    ephemeralWebSession?: boolean
+  }
+
+  type InAppBrowserAndroidOptions = {
     showTitle?: boolean,
     toolbarColor?: string,
     secondaryToolbarColor?: string,
@@ -29,8 +52,10 @@ declare module 'react-native-inappbrowser-reborn' {
       endEnter: string,
       endExit: string
     },
-    headers?: { [string]: string }
+    headers?: { [key: string]: string }
   }
+
+  export type InAppBrowserOptions = InAppBrowserAndroidOptions | InAppBrowseriOSOptions;
 
   type AuthSessionResult = RedirectResult | BrowserResult;
 
@@ -46,7 +71,7 @@ declare module 'react-native-inappbrowser-reborn' {
       options?: InAppBrowserOptions,
     ) => Promise<AuthSessionResult>;
     closeAuth: () => void;
-    isAvailable: () => Promise<void>;
+    isAvailable: () => Promise<boolean>;
   }
 
   const RNInAppBrowser: RNInAppBrowserClassMethods;

@@ -6,12 +6,14 @@ import android.os.Bundle;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
+import android.graphics.BitmapFactory;
 import android.provider.Browser;
 import androidx.annotation.Nullable;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.graphics.ColorUtils;
 
-import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.WritableMap;
@@ -24,6 +26,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 import java.util.regex.Pattern;
+import java.util.List;
 
 public class RNInAppBrowser {
   private final static String ERROR_CODE = "InAppBrowser";
@@ -39,8 +42,10 @@ public class RNInAppBrowser {
   private static final String KEY_ANIMATION_START_EXIT = "startExit";
   private static final String KEY_ANIMATION_END_ENTER = "endEnter";
   private static final String KEY_ANIMATION_END_EXIT = "endExit";
+  private static final String HASBACKBUTTON = "hasBackButton";
 
   private @Nullable Promise mOpenBrowserPromise;
+  private Boolean isLightTheme;
   private Activity currentActivity;
   private static final Pattern animationIdentifierPattern = Pattern.compile("^.+:.+/");
 
@@ -68,6 +73,7 @@ public class RNInAppBrowser {
       final String colorString = options.getString(KEY_TOOLBAR_COLOR);
       try {
         builder.setToolbarColor(Color.parseColor(colorString));
+        isLightTheme = toolbarIsLight(colorString);
       } catch (IllegalArgumentException e) {
         throw new JSApplicationIllegalArgumentException(
                 "Invalid toolbar color '" + colorString + "': " + e.getMessage());
@@ -82,17 +88,22 @@ public class RNInAppBrowser {
                 "Invalid secondary toolbar color '" + colorString + "': " + e.getMessage());
       }
     }
-    if (options.hasKey(KEY_ENABLE_URL_BAR_HIDING) && 
+    if (options.hasKey(KEY_ENABLE_URL_BAR_HIDING) &&
         options.getBoolean(KEY_ENABLE_URL_BAR_HIDING)) {
       builder.enableUrlBarHiding();
     }
-    if (options.hasKey(KEY_DEFAULT_SHARE_MENU_ITEM) && 
+    if (options.hasKey(KEY_DEFAULT_SHARE_MENU_ITEM) &&
         options.getBoolean(KEY_DEFAULT_SHARE_MENU_ITEM)) {
       builder.addDefaultShareMenuItem();
     }
     if (options.hasKey(KEY_ANIMATIONS)) {
       final ReadableMap animations = options.getMap(KEY_ANIMATIONS);
       applyAnimation(context, builder, animations);
+    }
+    if (options.hasKey(HASBACKBUTTON) &&
+            options.getBoolean(HASBACKBUTTON)) {
+      builder.setCloseButtonIcon(BitmapFactory.decodeResource(
+            context.getResources(), isLightTheme ? R.drawable.ic_arrow_back_black : R.drawable.ic_arrow_back_white));
     }
 
     CustomTabsIntent customTabsIntent = builder.build();
@@ -124,6 +135,7 @@ public class RNInAppBrowser {
         options.getBoolean(KEY_FORCE_CLOSE_ON_REDIRECTION)) {
       customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
       customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
     }
 
     Intent intent = customTabsIntent.intent;
@@ -135,10 +147,10 @@ public class RNInAppBrowser {
       intent.putExtra(CustomTabsIntent.EXTRA_TITLE_VISIBILITY_STATE, CustomTabsIntent.NO_TITLE);
     }
 
-    EventBus.getDefault().register(this);
+    registerEventBus();
 
     currentActivity.startActivity(
-        ChromeTabsManagerActivity.createStartIntent(currentActivity, intent));
+        ChromeTabsManagerActivity.createStartIntent(currentActivity, intent), customTabsIntent.startAnimationBundle);
   }
 
   public void close() {
@@ -153,7 +165,7 @@ public class RNInAppBrowser {
       return;
     }
 
-    EventBus.getDefault().unregister(this);
+    unRegisterEventBus();
 
     WritableMap result = Arguments.createMap();
     result.putString("type", "dismiss");
@@ -164,11 +176,19 @@ public class RNInAppBrowser {
         ChromeTabsManagerActivity.createDismissIntent(currentActivity));
   }
 
+  public void isAvailable(Context context, final Promise promise) {
+    Intent serviceIntent = new Intent("android.support.customtabs.action.CustomTabsService");
+    List<ResolveInfo> resolveInfos = context.getPackageManager().queryIntentServices(serviceIntent, 0);
+    promise.resolve(!(resolveInfos == null || resolveInfos.isEmpty()));
+  }
+
   @Subscribe
   public void onEvent(ChromeTabsDismissedEvent event) {
-    EventBus.getDefault().unregister(this);
+    unRegisterEventBus();
 
-    Assertions.assertNotNull(mOpenBrowserPromise);
+    if (mOpenBrowserPromise == null) {
+      throw new AssertionError();
+    }
 
     WritableMap result = Arguments.createMap();
     result.putString("type", event.resultType);
@@ -208,5 +228,21 @@ public class RNInAppBrowser {
     } else {
       return context.getResources().getIdentifier(identifier, "anim", context.getPackageName());
     }
+  }
+
+  private void registerEventBus() {
+    if (!EventBus.getDefault().isRegistered(this)) {
+      EventBus.getDefault().register(this);
+    }
+  }
+
+  private void unRegisterEventBus() {
+    if (EventBus.getDefault().isRegistered(this)) {
+      EventBus.getDefault().unregister(this);
+    }
+  }
+
+  private Boolean toolbarIsLight(String themeColor) {
+    return ColorUtils.calculateLuminance(Color.parseColor(themeColor)) > 0.5;
   }
 }

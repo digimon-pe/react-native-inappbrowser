@@ -11,42 +11,64 @@
 #import "RCTConvert.h"
 #endif
 #import <SafariServices/SafariServices.h>
-
-@interface RNInAppBrowser () <SFSafariViewControllerDelegate>
-
-@property (nonatomic, copy) RCTPromiseResolveBlock redirectResolve;
-@property (nonatomic, copy) RCTPromiseRejectBlock redirectReject;
+#if __has_include("AuthenticationServices/AuthenticationServices.h")
+#import <AuthenticationServices/AuthenticationServices.h>
+#endif
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
-@property (nonatomic, strong) SFAuthenticationSession *authSession;
-#pragma clang diagnostic pop
-
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+@interface RNInAppBrowser () <SFSafariViewControllerDelegate, ASWebAuthenticationPresentationContextProviding, UIAdaptivePresentationControllerDelegate>
+#else
+@interface RNInAppBrowser () <SFSafariViewControllerDelegate, UIAdaptivePresentationControllerDelegate>
+#endif
 @end
+#pragma clang diagnostic pop
 
 NSString *RNInAppBrowserErrorCode = @"RNInAppBrowser";
 
 @implementation RNInAppBrowser
-{
-  UIStatusBarStyle _initialStatusBarStyle;
-}
 
-RCT_EXPORT_MODULE()
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+static SFAuthenticationSession *authSession API_AVAILABLE(ios(11.0)) API_DEPRECATED("Use ASWebAuthenticationSession instead", ios(11.0, 12.0));
+#pragma clang diagnostic pop
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+static ASWebAuthenticationSession *webAuthSession API_AVAILABLE(ios(12.0));
+#pragma clang diagnostic pop
+
+static SFSafariViewController *safariVC;
+static RCTPromiseResolveBlock redirectResolve;
+static RCTPromiseRejectBlock redirectReject;
+static BOOL modalEnabled;
+static BOOL animated;
 
 - (dispatch_queue_t)methodQueue
 {
   return dispatch_get_main_queue();
 }
 
++ (BOOL)requiresMainQueueSetup
+{
+  return NO;
+}
+
+RCT_EXPORT_MODULE();
 
 RCT_EXPORT_METHOD(openAuth:(NSString *)authURL
                   redirectURL:(NSString *)redirectURL
+                  options:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-  [self initializeWebBrowserWithResolver:resolve andRejecter:reject];
+  if (![self initializeWebBrowserWithResolver:resolve andRejecter:reject]) {
+    return;
+  }
 
-
+  BOOL ephemeralWebSession = [options[@"ephemeralWebSession"] boolValue];
+    
   if (@available(iOS 11, *)) {
     NSURL *url = [[NSURL alloc] initWithString: authURL];
     __weak typeof(self) weakSelf = self;
@@ -55,29 +77,54 @@ RCT_EXPORT_METHOD(openAuth:(NSString *)authURL
       if (strongSelf) {
         if (!error) {
           NSString *url = callbackURL.absoluteString;
-          strongSelf->_redirectResolve(@{
-                                         @"type" : @"success",
-                                         @"url" : url,
-                                         });
+          redirectResolve(@{
+            @"type" : @"success",
+            @"url" : url,
+          });
         } else {
-          strongSelf->_redirectResolve(@{
-                                         @"type" : @"cancel",
-                                         });
+          redirectResolve(@{
+            @"type" : @"cancel",
+          });
         }
         [strongSelf flowDidFinish];
       }
     };
-    _authSession = [[SFAuthenticationSession alloc]
-                    initWithURL:url
-                    callbackURLScheme:redirectURL
-                    completionHandler:completionHandler];
-    [_authSession start];
+
+    if (@available(iOS 12.0, *)) {
+      webAuthSession = [[ASWebAuthenticationSession alloc]
+        initWithURL:url
+        callbackURLScheme:redirectURL
+        completionHandler:completionHandler];
+    } else {
+      authSession = [[SFAuthenticationSession alloc]
+        initWithURL:url
+        callbackURLScheme:redirectURL
+        completionHandler:completionHandler];
+    }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+    if (@available(iOS 13.0, *)) {
+      if (ephemeralWebSession) {
+        //Prevent re-use cookie from last auth session
+        webAuthSession.prefersEphemeralWebBrowserSession = true;
+      }
+      webAuthSession.presentationContextProvider = self;
+    }
+#endif
+#pragma clang diagnostic pop
+    if (@available(iOS 12.0, *)) {
+      [webAuthSession start];
+    } else {
+      [authSession start];
+    }
   } else {
-      resolve(@{
-          @"type" : @"cancel",
-          @"message" : @"openAuth requires iOS 11 or greater"
-      });
-      [self flowDidFinish];
+    resolve(@{
+      @"type" : @"cancel",
+      @"message" : @"openAuth requires iOS 11 or greater"
+    });
+    [self flowDidFinish];
   }
 }
 
@@ -94,11 +141,24 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
   NSString* dismissButtonStyle = [options valueForKey:@"dismissButtonStyle"];
   NSNumber* preferredBarTintColor = [options valueForKey:@"preferredBarTintColor"];
   NSNumber* preferredControlTintColor = [options valueForKey:@"preferredControlTintColor"];
+  NSString* modalPresentationStyle = [options valueForKey:@"modalPresentationStyle"];
+  NSString* modalTransitionStyle = [options valueForKey:@"modalTransitionStyle"];
+  
   BOOL readerMode = [options[@"readerMode"] boolValue];
+  BOOL enableBarCollapsing = [options[@"enableBarCollapsing"] boolValue];
+  modalEnabled = [options[@"modalEnabled"] boolValue];
+  animated = [options[@"animated"] boolValue];
 
   // Safari View Controller to authorize request
   NSURL *url = [[NSURL alloc] initWithString:authURL];
-  SFSafariViewController *safariVC = [[SFSafariViewController alloc] initWithURL:url entersReaderIfAvailable:readerMode];
+  if (@available(iOS 11.0, *)) {
+    SFSafariViewControllerConfiguration *config = [[SFSafariViewControllerConfiguration alloc] init];
+    config.barCollapsingEnabled = enableBarCollapsing;
+    config.entersReaderIfAvailable = readerMode;
+    safariVC = [[SFSafariViewController alloc] initWithURL:url configuration:config];
+  } else {
+    safariVC = [[SFSafariViewController alloc] initWithURL:url entersReaderIfAvailable:readerMode];
+  }
   safariVC.delegate = self;
   if (@available(iOS 11.0, *)) {
     if ([dismissButtonStyle isEqualToString:@"done"]) {
@@ -120,15 +180,33 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
     }
   }
 
- // By setting the modal presentation style to OverFullScreen, we disable the "Swipe to dismiss"
- // gesture that is causing a bug where sometimes `safariViewControllerDidFinish` is not called.
- // There are bugs filed already about it on OpenRadar.
- [safariVC setModalPresentationStyle: UIModalPresentationOverFullScreen];
+  UIViewController *ctrl = RCTPresentedViewController();
+  if (modalEnabled) {
+    // This is a hack to present the SafariViewController modally
+    UINavigationController *safariHackVC = [[UINavigationController alloc] initWithRootViewController:safariVC];
+    [safariHackVC setNavigationBarHidden:true animated:false];
 
- // This is a hack to present the SafariViewController modally
- UINavigationController *safariHackVC = [[UINavigationController alloc] initWithRootViewController:safariVC];
- [safariHackVC setNavigationBarHidden:true animated:false];
- [RCTPresentedViewController() presentViewController:safariHackVC animated:true completion:nil];
+    // To disable "Swipe to dismiss" gesture which sometimes causes a bug where `safariViewControllerDidFinish` 
+    // is not called.
+    safariVC.modalPresentationStyle = UIModalPresentationOverFullScreen;
+    safariHackVC.modalPresentationStyle = [self getPresentationStyle: modalPresentationStyle];
+    if(animated) {
+      safariHackVC.modalTransitionStyle = [self getTransitionStyle: modalTransitionStyle];
+    }
+    safariHackVC.presentationController.delegate = self;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+    if (@available(iOS 13.0, *)) {
+      [safariHackVC setModalInPresentation:TRUE];
+    }
+#endif
+#pragma clang diagnostic pop
+    [ctrl presentViewController:safariHackVC animated:animated completion:nil];
+  }
+  else {
+    [ctrl presentViewController:safariVC animated:animated completion:nil];
+  }
 }
 
 - (void)performSynchronouslyOnMainThread:(void (^)(void))block
@@ -144,15 +222,16 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
 {
   __weak typeof(self) weakSelf = self;
   [self performSynchronouslyOnMainThread:^{
-    [RCTPresentedViewController() dismissViewControllerAnimated:YES completion:^{
-      __strong typeof(self) strongSelf = weakSelf;
-      if (strongSelf) {
-        strongSelf.redirectResolve(@{
-                                     @"type": @"dismiss",
-                                     });
-        [strongSelf flowDidFinish];
-      }
-    }];
+      UIViewController *ctrl = RCTPresentedViewController();
+      [ctrl dismissViewControllerAnimated:animated completion:^{
+        __strong typeof(self) strongSelf = weakSelf;
+        if (strongSelf && redirectResolve) {
+          redirectResolve(@{
+            @"type": @"dismiss",
+          });
+          [strongSelf flowDidFinish];
+        }
+      }];
   }];
 }
 
@@ -162,13 +241,16 @@ RCT_EXPORT_METHOD(close) {
 
 RCT_EXPORT_METHOD(closeAuth) {
   if (@available(iOS 11, *)) {
-    [_authSession cancel];
-    if (_redirectResolve) {
-      _redirectResolve(@{
-        @"type": @"dismiss"
+    if (redirectResolve) {
+      redirectResolve(@{
+        @"type": @"dismiss",
       });
-
       [self flowDidFinish];
+    }
+    if (@available(iOS 12.0, *)) {
+      [webAuthSession cancel];
+    } else {
+      [authSession cancel];
     }
   } else {
     [self close];
@@ -181,7 +263,7 @@ RCT_EXPORT_METHOD(isAvailable:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromi
     // SafariView is available
     resolve(@YES);
   } else {
-    reject(@"E_SAFARI_VIEW_UNAVAILABLE", @"SafariView is unavailable", nil);
+    resolve(@NO);
   }
 }
 
@@ -189,12 +271,12 @@ RCT_EXPORT_METHOD(isAvailable:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromi
  * Helper that is used in open and openAuth
  */
 - (BOOL)initializeWebBrowserWithResolver:(RCTPromiseResolveBlock)resolve andRejecter:(RCTPromiseRejectBlock)reject {
-  if (_redirectResolve) {
+  if (redirectResolve) {
     reject(RNInAppBrowserErrorCode, @"Another InAppBrowser is already being presented.", nil);
     return NO;
   }
-  _redirectReject = reject;
-  _redirectResolve = resolve;
+  redirectReject = reject;
+  redirectResolve = resolve;
 
   return YES;
 }
@@ -204,16 +286,92 @@ RCT_EXPORT_METHOD(isAvailable:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromi
  */
 - (void)safariViewControllerDidFinish:(SFSafariViewController *)controller
 {
-  _redirectResolve(@{
-    @"type": @"cancel",
-  });
+  if (redirectResolve) {
+    redirectResolve(@{
+      @"type": @"cancel",
+    });
+  }
   [self flowDidFinish];
+  if (!animated) {
+    [self dismissWithoutAnimation:controller];
+  }
 }
 
 -(void)flowDidFinish
 {
-  _redirectResolve = nil;
-  _redirectReject = nil;
+  safariVC = nil;
+  redirectResolve = nil;
+  redirectReject = nil;
 }
+
+- (UIModalPresentationStyle)getPresentationStyle:(NSString *)styleKey {
+  NSDictionary *styles = @{
+    @"none": @(UIModalPresentationNone),
+    @"fullScreen": @(UIModalPresentationFullScreen),
+    @"pageSheet": @(UIModalPresentationPageSheet),
+    @"formSheet": @(UIModalPresentationFormSheet),
+    @"currentContext": @(UIModalPresentationCurrentContext),
+    @"custom": @(UIModalPresentationCustom),
+    @"overFullScreen": @(UIModalPresentationOverFullScreen),
+    @"overCurrentContext": @(UIModalPresentationOverCurrentContext),
+    @"popover": @(UIModalPresentationPopover)
+  };
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+  UIModalPresentationStyle modalPresentationStyle = UIModalPresentationFullScreen;
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+  if (@available(iOS 13.0, *)) {
+    modalPresentationStyle = UIModalPresentationAutomatic;
+  }
+#endif
+#pragma clang diagnostic pop
+  NSNumber *style = [styles objectForKey: styleKey];
+  if (style != nil) {
+    modalPresentationStyle = [style intValue];
+  }
+  return modalPresentationStyle;
+}
+
+- (UIModalTransitionStyle)getTransitionStyle:(NSString *)styleKey {
+  NSDictionary *styles = @{
+    @"coverVertical": @(UIModalTransitionStyleCoverVertical),
+    @"flipHorizontal": @(UIModalTransitionStyleFlipHorizontal),
+    @"crossDissolve": @(UIModalTransitionStyleCrossDissolve),
+    @"partialCurl": @(UIModalTransitionStylePartialCurl)
+  };
+  UIModalTransitionStyle modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+  NSNumber *style = [styles objectForKey: styleKey];
+  if (style != nil) {
+    modalTransitionStyle = [style intValue];
+  }
+  return modalTransitionStyle;
+}
+
+- (void)dismissWithoutAnimation:(SFSafariViewController *)controller
+{
+  CATransition* transition = [CATransition animation];
+  transition.duration = 0;
+  transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+  transition.type = kCATransitionFade;
+  transition.subtype = kCATransitionFromBottom;
+
+  controller.view.alpha = 0.05;
+  controller.view.frame = CGRectMake(0.0, 0.0, 0.5, 0.5);
+
+  UIViewController *ctrl = RCTPresentedViewController();
+  NSString* animationKey = @"dismissInAppBrowser";
+  [ctrl.view.layer addAnimation:transition forKey:animationKey];
+  [ctrl dismissViewControllerAnimated:NO completion:^{
+    [ctrl.view.layer removeAnimationForKey:animationKey];
+  }];
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+- (UIWindow *)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session API_AVAILABLE(ios(13.0))
+{
+  return UIApplication.sharedApplication.keyWindow;
+}
+#pragma clang diagnostic pop
 
 @end

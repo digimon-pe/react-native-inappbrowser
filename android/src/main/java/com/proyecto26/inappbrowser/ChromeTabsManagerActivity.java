@@ -25,8 +25,11 @@ public class ChromeTabsManagerActivity extends Activity {
   static final String YBROWSER_CLASS_NAME = "jp.co.yahoo.android.ybrowser.YBrowserBrowserActivity";
   static final String YAHOO_JAPAN_PACKAGE_NAME = "jp.co.yahoo.android.yjtop";
   static final String YAHOO_JAPAN_CLASS_NAME = "jp.co.yahoo.android.yjtop.browser.BrowserActivity";
+  static final String BROWSER_RESULT_TYPE = "browserResultType";
+  static final String DEFAULT_RESULT_TYPE = "dismiss";
 
   private boolean mOpened = false;
+  private String resultType = null;
 
   public static Intent createStartIntent(Context context, Intent authIntent) {
     Intent intent = createBaseIntent(context);
@@ -51,7 +54,9 @@ public class ChromeTabsManagerActivity extends Activity {
     // This activity gets opened in 2 different ways. If the extra KEY_BROWSER_INTENT is present we
     // start that intent and if it is not it means this activity was started with FLAG_ACTIVITY_CLEAR_TOP
     // in order to close the intent that was started previously so we just close this.
-    if (getIntent().hasExtra(KEY_BROWSER_INTENT)) {
+    if (getIntent().hasExtra(KEY_BROWSER_INTENT)
+      && (savedInstanceState == null || savedInstanceState.getString(BROWSER_RESULT_TYPE) == null)
+    ) {
       Intent browserIntent = getIntent().getParcelableExtra(KEY_BROWSER_INTENT);
       browserIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
@@ -62,6 +67,8 @@ public class ChromeTabsManagerActivity extends Activity {
               || name.getPackageName().equals(YAHOO_JAPAN_PACKAGE_NAME) && name.getClassName().equals((YAHOO_JAPAN_CLASS_NAME))) {
         startActivity(browserIntent);
       }
+
+      resultType = DEFAULT_RESULT_TYPE;
     } else {
       finish();
     }
@@ -83,13 +90,24 @@ public class ChromeTabsManagerActivity extends Activity {
       } else {
         EventBus.getDefault().post(new ChromeTabsDismissedEvent(null, "chrome tabs activity closed", "cancel"));
       }
+      resultType = "cancel";
       finish();
     }
   }
 
   @Override
   protected void onDestroy() {
-    EventBus.getDefault().post(new ChromeTabsDismissedEvent(null, "chrome tabs activity destroyed", "dismiss"));
+    if (resultType != null) {
+      switch (resultType) {
+        case "cancel":
+          EventBus.getDefault().post(new ChromeTabsDismissedEvent("chrome tabs activity closed", resultType));
+          break;
+        default:
+          EventBus.getDefault().post(new ChromeTabsDismissedEvent("chrome tabs activity destroyed", DEFAULT_RESULT_TYPE));
+          break;
+      }
+      resultType = null;
+    }
     super.onDestroy();
   }
 
@@ -97,5 +115,17 @@ public class ChromeTabsManagerActivity extends Activity {
   protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     setIntent(intent);
+  }
+
+  @Override
+  protected void onRestoreInstanceState(Bundle savedInstanceState) {
+    super.onRestoreInstanceState(savedInstanceState);
+    resultType = savedInstanceState.getString(BROWSER_RESULT_TYPE);
+  }
+
+  @Override
+  protected void onSaveInstanceState(Bundle savedInstanceState) {
+    savedInstanceState.putString(BROWSER_RESULT_TYPE, DEFAULT_RESULT_TYPE);
+    super.onSaveInstanceState(savedInstanceState);
   }
 }
