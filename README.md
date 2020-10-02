@@ -1,32 +1,6 @@
 <p align="center">
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" />
-  </a>
-  <a href="https://npmjs.org/package/react-native-inappbrowser-reborn">
-    <img src="http://img.shields.io/npm/v/react-native-inappbrowser-reborn.svg" alt="Current npm package version" />
-  </a>
-  <a href="https://github.com/proyecto26/react-native-inappbrowser/graphs/commit-activity">
-    <img src="https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg" alt="Maintenance" />
-  </a>
-  <a href="https://tidelift.com/subscription/pkg/npm-react-native-inappbrowser-reborn?utm_source=npm-react-native-inappbrowser-reborn&utm_medium=referral&utm_campaign=readme">
-    <img src="https://tidelift.com/badges/package/npm/react-native-inappbrowser-reborn" alt="Tidelift Subscription" />
-  </a>
-  <a href="https://opencollective.com/proyecto26" alt="Financial Contributors on Open Collective">
-    <img src="https://opencollective.com/proyecto26/all/badge.svg?label=financial+contributors" />
-  </a>
-  <a href="https://npmjs.org/package/react-native-inappbrowser-reborn">
-    <img src="http://img.shields.io/npm/dm/react-native-inappbrowser-reborn.svg" alt="Downloads" />
-  </a>
-  <a href="https://npmjs.org/package/react-native-inappbrowser-reborn">
-    <img src="http://img.shields.io/npm/dt/react-native-inappbrowser-reborn.svg?label=total%20downloads" alt="Total downloads" />
-  </a>
-  <a href="https://twitter.com/intent/follow?screen_name=jdnichollsc">
-    <img src="https://img.shields.io/twitter/follow/jdnichollsc.svg?label=Follow%20@jdnichollsc" alt="Follow @jdnichollsc" />
-  </a>
+  <h1 align="center">InAppBrowser for React Native</h1>
 </p>
-
-<h1 align="center">InAppBrowser for React Native</h1>
-<h4 align="center"><a href="https://developer.chrome.com/multidevice/android/customtabs#whatarethey">Chrome Custom Tabs</a> for Android & <a href="https://developer.apple.com/documentation/safariservices">SafariServices</a>/<a href="https://developer.apple.com/documentation/authenticationservices">AuthenticationServices</a> for iOS.</h4>
 
 <p align="center">
   <img width="400px" src="img/inappbrowser.png">
@@ -38,52 +12,10 @@
 
 ### Mostly automatic installation
 
-#### Using React Native >= 0.60
-Linking the package manually is not required anymore with [Autolinking](https://github.com/react-native-community/cli/blob/master/docs/autolinking.md).
-
-- **iOS Platform:**
-
-  `$ cd ios && pod install && cd ..` # CocoaPods on iOS needs this extra step
-
-- **Android Platform with Android Support:**
-
-  Using [Jetifier tool](https://github.com/mikehardy/jetifier) for backward-compatibility.
-
-  Modify your **android/build.gradle** configuration:
-  ```
-  buildscript {
-    ext {
-      buildToolsVersion = "28.0.3"
-      minSdkVersion = 16
-      compileSdkVersion = 28
-      targetSdkVersion = 28
-      # Only using Android Support libraries
-      supportLibVersion = "28.0.0"
-    }
-  ```
-
-- **Android Platform with AndroidX:**
-
-  Modify your **android/build.gradle** configuration:
-  ```
-  buildscript {
-    ext {
-      buildToolsVersion = "28.0.3"
-      minSdkVersion = 16
-      compileSdkVersion = 28
-      targetSdkVersion = 28
-      # Remove 'supportLibVersion' property and put specific versions for AndroidX libraries
-      androidXAnnotation = "1.1.0"
-      androidXBrowser = "1.0.0"
-      // Put here other AndroidX dependencies
-    }
-  ```
-
-#### Using React Native < 0.60
-
 `$ react-native link react-native-inappbrowser-reborn`
 
 ### Manual installation
+
 
 #### iOS
 
@@ -111,98 +43,52 @@ Linking the package manually is not required anymore with [Autolinking](https://
   	```
       implementation project(':react-native-inappbrowser-reborn')
   	```
-4. Update ProGuard config (Optional)
-  - Append the following lines to your ProGuard config (`proguard-rules.pro`)
-    ```
-    -keepattributes *Annotation*
-    -keepclassmembers class ** {
-      @org.greenrobot.eventbus.Subscribe <methods>;
-    }
-    -keep enum org.greenrobot.eventbus.ThreadMode { *; }
-    ```
 
 ## Usage
 
 Methods       | Action
 ------------- | ------
 `open`        | Opens the url with Safari in a modal on iOS using **SFSafariViewController**, and Chrome in a new custom tab on Android. On iOS, the modal Safari will not share cookies with the system Safari.
-`close`       | Dismisses the system's presented web browser.
-`openAuth`    | Opens the url with Safari in a modal on iOS using **SFAuthenticationSession/ASWebAuthenticationSession**, and Chrome in a new custom tab on Android. On iOS, the user will be asked whether to allow the app to authenticate using the given url **(OAuth flow with deep linking redirection)**.
-`closeAuth`   | Dismisses the current authentication session.
-`isAvailable` | Detect if the device supports this plugin.
-
-### iOS Options
-
-Property       | Description
--------------- | ------
-`dismissButtonStyle` (String)        | The style of the dismiss button. [`done`/`close`/`cancel`]
-`preferredBarTintColor` (String)     | The color to tint the background of the navigation bar and the toolbar. [`white`/`#FFFFFF`]
-`preferredControlTintColor` (String) | The color to tint the control buttons on the navigation bar and the toolbar. [`gray`/`#808080`]
-`readerMode` (Boolean)               | A value that specifies whether Safari should enter Reader mode, if it is available. [`true`/`false`]
-`animated` (Boolean)                 | Animate the presentation. [`true`/`false`]
-`modalPresentationStyle` (String)    | The presentation style for modally presented view controllers. [`automatic`/`none`/`fullScreen`/`pageSheet`/`formSheet`/`currentContext`/`custom`/`overFullScreen`/`overCurrentContext`/`popover`]
-`modalTransitionStyle` (String)      | The transition style to use when presenting the view controller. [`coverVertical`/`flipHorizontal`/`crossDissolve`/`partialCurl`]
-`modalEnabled` (Boolean)             | Present the **SafariViewController** modally or as push instead. [`true`/`false`]
-`enableBarCollapsing` (Boolean)      | Determines whether the browser's tool bars will collapse or not. [`true`/`false`]
-`ephemeralWebSession` (Boolean)      | Prevent re-use cookies of previous session (openAuth only) [`true`/`false`]
-
-### Android Options
-Property       | Description
--------------- | ------
-`showTitle` (Boolean)   | Sets whether the title should be shown in the custom tab. [`true`/`false`]
-`hasBackButton` (Boolean)   | Sets a back arrow instead of the default X icon to close the custom tab. [`true`/`false`]
-`toolbarColor` (String)           | Sets the toolbar color. [`gray`/`#808080`]
-`secondaryToolbarColor` (String)  | Sets the color of the secondary toolbar. [`white`/`#FFFFFF`]
-`enableUrlBarHiding` (Boolean)    | Enables the url bar to hide as the user scrolls down on the page. [`true`/`false`]
-`enableDefaultShare` (Boolean)    | Adds a default share item to the menu. [`true`/`false`]
-`animations` (Object)             | Sets the start and exit animations. [`{ startEnter, startExit, endEnter, endExit }`]
-`headers` (Object)                | The data are key/value pairs, they will be sent in the HTTP request headers for the provided url. [`{ 'Authorization': 'Bearer ...' }`]
-`forceCloseOnRedirection` (Boolean) | Open Custom Tab in a new task to avoid issues redirecting back to app scheme. [`true`/`false`]
+`close`       | Dismisses the system's presented web browser
+`openAuth`    | Opens the url with Safari in a modal on iOS using **SFAuthenticationSession**, and Chrome in a new custom tab on Android. On iOS, the user will be asked whether to allow the app to authenticate using the given url.
+`closeAuth`   | Dismisses the current authentication session
+`isAvailable` | Detect if the device supports this plugin
 
 ### Demo
 
 ```javascript
-import { Linking } from 'react-native'
-import InAppBrowser from 'react-native-inappbrowser-reborn'
+import InAppBrowser from 'react-native-inappbrowser-reborn';
 
 ...
   async openLink() {
     try {
-      const url = 'https://www.google.com'
-      if (await InAppBrowser.isAvailable()) {
-        const result = await InAppBrowser.open(url, {
-          // iOS Properties
-          dismissButtonStyle: 'cancel',
-          preferredBarTintColor: '#453AA4',
-          preferredControlTintColor: 'white',
-          readerMode: false,
-          animated: true,
-          modalPresentationStyle: 'fullScreen',
-          modalTransitionStyle: 'partialCurl',
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          // Android Properties
-          showTitle: true,
-          toolbarColor: '#6200EE',
-          secondaryToolbarColor: 'black',
-          enableUrlBarHiding: true,
-          enableDefaultShare: true,
-          forceCloseOnRedirection: false,
-          // Specify full animation resource identifier(package:anim/name)
-          // or only resource name(in case of animation bundled with app).
-          animations: {
-            startEnter: 'slide_in_right',
-            startExit: 'slide_out_left',
-            endEnter: 'slide_in_left',
-            endExit: 'slide_out_right'
-          },
-          headers: {
-            'my-custom-header': 'my custom header value'
-          }
-        })
-        Alert.alert(JSON.stringify(result))
-      }
-      else Linking.openURL(url)
+      await InAppBrowser.isAvailable()
+      const result = await InAppBrowser.open('https://www.google.com', {
+        // iOS Properties
+        dismissButtonStyle: 'cancel',
+        preferredBarTintColor: 'gray',
+        preferredControlTintColor: 'white',
+        readerMode: false,
+        // Android Properties
+        showTitle: true,
+        toolbarColor: '#6200EE',
+        secondaryToolbarColor: 'black',
+        enableUrlBarHiding: true,
+        enableDefaultShare: true,
+        forceCloseOnRedirection: false,
+        // Specify full animation resource identifier(package:anim/name)
+        // or only resource name(in case of animation bundled with app).
+        animations: {
+          startEnter: 'slide_in_right',
+          startExit: 'slide_out_left',
+          endEnter: 'slide_in_right',
+          endExit: 'slide_out_left',
+        },
+        headers: {
+          'my-custom-header': 'my custom header value'
+        },
+      });
+      Alert.alert(JSON.stringify(result));
     } catch (error) {
       Alert.alert(error.message)
     }
@@ -211,36 +97,6 @@ import InAppBrowser from 'react-native-inappbrowser-reborn'
 ```
 
 ### Authentication Flow using Deep Linking
-
-In order to redirect back to your application from a web browser, you must specify a unique URI to your app. To do this,
-define your app scheme and replace `my-scheme` and `my-host` with your info.
-
-- Enable deep linking (Android) - **[AndroidManifest.xml](https://github.com/proyecto26/react-native-inappbrowser/blob/master/example/android/app/src/main/AndroidManifest.xml#L23)**
-```
-<intent-filter>
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="my-scheme" android:host="my-host" android:pathPrefix="" />
-</intent-filter>
-```
-
-- Enable deep linking (iOS) - **[Info.plist](https://github.com/proyecto26/react-native-inappbrowser/blob/master/example/ios/example/Info.plist#L23)**
-```
-<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleTypeRole</key>
-    <string>Editor</string>
-    <key>CFBundleURLName</key>
-    <string>my-scheme</string>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>my-scheme</string>
-    </array>
-  </dict>
-</array>
-```
 
 - utilities.js
 ```javascript
@@ -259,12 +115,11 @@ import { createStackNavigator } from 'react-navigation'
 
 const Main = createStackNavigator(
   {
-    SplashComponent: { screen: SplashComponent },
     LoginComponent: { screen: LoginComponent },
     HomeComponent: { screen: HomeComponent },
-    CallbackComponent: { //Redirect users to the Home page if they are authenticated, otherwise to Login page...
-      screen: CallbackComponent,
-      path: 'callback/' //Enable Deep linking redirection to get the auth_token
+    SplashComponent: { //Redirect users to the Home page if they are authenticated, otherwise to Login page...
+      screen: SplashComponent,
+      path: 'callback/' //Deep linking to get the auth_token
     }
   },
   {
@@ -294,23 +149,20 @@ import { getDeepLink } from './utilities'
     const deepLink = getDeepLink("callback")
     const url = `https://my-auth-login-page.com?redirect_uri=${deepLink}`
     try {
-      if (await InAppBrowser.isAvailable()) {
-        InAppBrowser.openAuth(url, deepLink, {
-          // iOS Properties
-          ephemeralWebSession: false,
-          // Android Properties
-          showTitle: false,
-          enableUrlBarHiding: true,
-          enableDefaultShare: false
-        }).then((response) => {
-          if (
-            response.type === 'success' &&
-            response.url
-          ) {
-            Linking.openURL(response.url)
-          }
-        })
-      } else Linking.openURL(url)
+      await InAppBrowser.isAvailable()
+      InAppBrowser.openAuth(url, deepLink, {
+        // iOS Properties
+        dismissButtonStyle: 'cancel',
+        // Android Properties
+        showTitle: false,
+        enableUrlBarHiding: true,
+        enableDefaultShare: true,
+      }).then((response) => {
+        if (response.type === 'success' &&
+          response.url) {
+          Linking.openURL(response.url)
+        }
+      })
     } catch (error) {
       Linking.openURL(url)
     }
@@ -321,39 +173,18 @@ import { getDeepLink } from './utilities'
 - SplashComponent
 ```javascript
 ...
-  async componentDidMount() {
-    // Play Lottie Animation :)
-
-    // Validate the stored access token (Maybe with a request)
-    // Redirect the user to the Home page if the token is still valid
-    // Otherwise redirect to the Login page
-  }
-...
-```
-
-- CallbackComponent
-```javascript
-...
-  async componentDidMount() {
-    // Play Lottie Animation :)
-    try {
-      await this.loadUserInfo()
-      // Redirect to the Home page
-    } catch (error) {
-      // Show error and redirect the user to the Login page
-    }
-  }
-
-  async loadUserInfo() {
+  componentWillMount() {
     const { navigation } = this.props
     const { state: { params } } = navigation
-    const { code, error } = params || {}
+    const { access_token } = params || {}
 
-    if (code) {
-      // Get and Save the access token request, user info...
+    if (access_token) {
+      // Opened by deep linking, the user is authenticated
+      // Redirect to the Home page
     }
     else {
-      return Promise.reject(new Error(error))
+      // Detect if the stored token is still valid
+      // And redirect the user to Home or Login page
     }
   }
 ...
@@ -361,24 +192,7 @@ import { getDeepLink } from './utilities'
 
 ### StatusBar
 
-The StatusBar will keep the last one provided in your app. So if the StatusBar is `dark-content` before you open the browser this will keep it.
-
-Starting with React Native 0.59 onwards, there is a simpler way of handling this update, without the need of patching StatusBar.
-```javascript
-  async openInBrowser(url) {
-    try {
-      const oldStyle = StatusBar.pushStackEntry({ barStyle: 'dark-content', animate: false });
-      await InAppBrowser.open(url)
-      StatusBar.popStackEntry(oldStyle);
-    } catch (error) {
-      Alert.alert(error.message)
-    }
-  })
-```
-
-For previous versions, you can still apply the method described below.
-
-If you want to change before opening you can do something like
+The StatusBar will keep the last one provided in your app. So if the StatusBar is `dark-content` before you open the browser this will keep it. If you want to change before opening you can do something like
 
 ```javascript
   async openInBrowser(url) {
@@ -386,7 +200,7 @@ If you want to change before opening you can do something like
       StatusBar.setBarStyle('dark-content')
       await InAppBrowser.open(url)
     } catch (error) {
-      Alert.alert(error.message)
+      Alert.alert(error.message);
     }
   })
 ```
@@ -395,14 +209,14 @@ If you need to restore the old bar style, after the browser is dismissed, you ca
 
 ```js
 // patch StatusBar.setBarStyle to make style accessible
-const _setBarStyle = StatusBar.setBarStyle
+const _setBarStyle = StatusBar.setBarStyle;
 StatusBar.setBarStyle = (style) => {
-  StatusBar.currentStyle = style
-  _setBarStyle(style)
-}
+	StatusBar.currentStyle = style;
+	_setBarStyle(style);
+};
 ```
 
-You can than restore the old bar style after the browser has been dismissed like this:
+You can than restore the old bar style after the browser has been dismissed like this: 
 
 ```javascript
   async openInBrowser(url) {
@@ -412,14 +226,10 @@ You can than restore the old bar style after the browser has been dismissed like
       await InAppBrowser.open(url)
       if(oldStyle) StatusBar.setBarStyle(oldStyle)
     } catch (error) {
-      Alert.alert(error.message)
+      Alert.alert(error.message);
     }
   })
 ```
-
-### Authentication
-
-Using in-app browser tabs (like SFAuthenticationSession/ASWebAuthenticationSession and Android Custom Tabs) where available. Embedded user-agents, known as web-views (like UIWebView and WKWebView), are explicitly not supported due to the usability and security reasons documented in [Section 8.12 of RFC 8252](https://tools.ietf.org/html/rfc8252#section-8.12).
 
 ## Credits 👍
 * **Expo:** [WebBrowser](https://docs.expo.io/versions/latest/sdk/webbrowser)
@@ -427,48 +237,16 @@ Using in-app browser tabs (like SFAuthenticationSession/ASWebAuthenticationSessi
 * **React Native Safari View:** [A React Native wrapper for Safari View Controller](https://github.com/naoufal/react-native-safari-view)
 
 ## Contributors ✨
-Please do contribute! Issues and pull requests are welcome.
-
-### Code Contributors
-
-This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
-<a href="https://github.com/proyecto26/react-native-inappbrowser/graphs/contributors"><img src="https://opencollective.com/proyecto26/contributors.svg?width=890&button=false" /></a>
-
-### Financial Contributors
-
-Become a financial contributor and help us sustain our community. [[Contribute](https://opencollective.com/proyecto26/contribute)]
-
-#### Individuals
-
-<a href="https://opencollective.com/proyecto26"><img src="https://opencollective.com/proyecto26/individuals.svg?width=890"></a>
-
-#### Organizations
-
-Support this project with your organization. Your logo will show up here with a link to your website. [[Contribute](https://opencollective.com/proyecto26/contribute)]
-
-<a href="https://opencollective.com/proyecto26/organization/0/website"><img src="https://opencollective.com/proyecto26/organization/0/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/1/website"><img src="https://opencollective.com/proyecto26/organization/1/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/2/website"><img src="https://opencollective.com/proyecto26/organization/2/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/3/website"><img src="https://opencollective.com/proyecto26/organization/3/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/4/website"><img src="https://opencollective.com/proyecto26/organization/4/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/5/website"><img src="https://opencollective.com/proyecto26/organization/5/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/6/website"><img src="https://opencollective.com/proyecto26/organization/6/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/7/website"><img src="https://opencollective.com/proyecto26/organization/7/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/8/website"><img src="https://opencollective.com/proyecto26/organization/8/avatar.svg"></a>
-<a href="https://opencollective.com/proyecto26/organization/9/website"><img src="https://opencollective.com/proyecto26/organization/9/avatar.svg"></a>
+Thanks goes to these wonderful people:
+<!-- CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+| [<img alt="jdnichollsc" src="https://avatars3.githubusercontent.com/u/2154886?v=3" width="100" /><br /><sub><b>Juan Nicholls</b></sub>](https://github.com/jdnichollsc)<br />[✉](mailto:jdnichollsc@hotmail.com) | [<img alt="EQuimper" src="https://avatars3.githubusercontent.com/u/15819498?v=3" width="100" /><br /><sub><b>Emanuel Quimper</b></sub>](https://github.com/EQuimper)<br />[✉](mailto:quimperemanuel@gmail.com) | [<img alt="bonesyblue" src="https://avatars3.githubusercontent.com/u/7486722?v=3" width="100" /><br /><sub><b>Jonathan Bones</b></sub>](https://github.com/bonesyblue)<br />[✉](mailto:bonesyblue@gmail.com) | [<img alt="mlazari" src="https://avatars3.githubusercontent.com/u/4928274?v=3" width="100" /><br /><sub><b>Mihai Lazari</b></sub>](https://github.com/mlazari) | [<img alt="maestor" src="https://avatars3.githubusercontent.com/u/3604902?v=3" width="100" /><br /><sub><b>Kalle Haavisto</b></sub>](https://github.com/maestor)<br />[✉](mailto:maestori@gmail.com) | [<img alt="plamworapot" src="https://avatars3.githubusercontent.com/u/4770354?v=3" width="100" /><br /><sub><b>Worapot Pengsuk</b></sub>](https://github.com/plamworapot) | [<img alt="adammcarth" src="https://avatars3.githubusercontent.com/u/3016455?v=3" width="100" /><br /><sub><b>Adam McArthur</b></sub>](https://github.com/adammcarth)<br />[✉](mailto:adam@adammcarthur.net) |
+| :---: | :---: |:---: | :---: | :---: | :---: | :---: |
+| [<img alt="SnaiNeR" src="https://avatars3.githubusercontent.com/u/39980963?v=3" width="100" /><br /><sub><b>Artem Emelyanov</b></sub>](https://github.com/SnaiNeR)<br />[✉](mailto:snainer@gmail.com) | [<img alt="rbscott" src="https://avatars2.githubusercontent.com/u/882258?v=4&s=117" width="100" /><br /><sub><b>Robert Scott</b></sub>](https://github.com/rbscott) |
+<!-- CONTRIBUTORS-LIST:END -->
 
 ## Supporting 🍻
 I believe in Unicorns 🦄
 Support [me](http://www.paypal.me/jdnichollsc/2), if you do too.
-
-## Enterprise 💼
-
-Available as part of the Tidelift Subscription.
-
-The maintainers of InAppBrowser for React Native and thousands of other packages are working with Tidelift to deliver commercial support and maintenance for the open source dependencies you use to build your applications. Save time, reduce risk, and improve code health, while paying the maintainers of the exact dependencies you use. [Learn more.](https://tidelift.com/subscription/pkg/npm-react-native-inappbrowser-reborn?utm_source=npm-react-native-inappbrowser-reborn&utm_medium=referral&utm_campaign=enterprise&utm_term=repo)
-
-## Security contact information 🚨
-To report a security vulnerability, please use the [Tidelift security contact](https://tidelift.com/security). Tidelift will coordinate the fix and disclosure.
 
 ## Happy coding 💯
 Made with ❤️

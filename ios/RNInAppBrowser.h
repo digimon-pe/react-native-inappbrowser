@@ -5,4 +5,6 @@
 #endif
 
 @interface RNInAppBrowser : NSObject <RCTBridgeModule>
+
 @end
+  
